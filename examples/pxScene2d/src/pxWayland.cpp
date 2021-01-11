@@ -589,17 +589,19 @@ void pxWayland::launchClient()
 
 void pxWayland::launchAndMonitorClient()
 {
-   rtLogInfo( "pxWayland::launchAndMonitorClient enter for (%s)", mCmd.cString() );
-
-   mClientMonitorStarted= true;
-
-   if ( !WstCompositorLaunchClient( mWCtx, mCmd.cString() ) )
+   if( mClientMonitorStarted == false )
    {
-      rtLogError( "pxWayland::launchAndMonitorClient: WstCompositorLaunchClient failed for (%s)", mCmd.cString() );
-      const char *detail= WstCompositorGetLastErrorDetail( mWCtx );
-      rtLogError("Compositor error: (%s)\n", detail );
-   }
+      rtLogInfo( "pxWayland::launchAndMonitorClient enter for (%s)", mCmd.cString() );
 
+      mClientMonitorStarted= true;
+
+      if ( !WstCompositorLaunchClient( mWCtx, mCmd.cString() ) )
+      {
+         rtLogError( "pxWayland::launchAndMonitorClient: WstCompositorLaunchClient failed for (%s)", mCmd.cString() );
+         const char *detail= WstCompositorGetLastErrorDetail( mWCtx );
+         rtLogError("Compositor error: (%s)\n", detail );
+      }
+   }
    mClientMonitorStarted= false;
 
    rtLogInfo( "pxWayland::launchAndMonitorClient exit for (%s)", mCmd.cString() );
@@ -620,13 +622,14 @@ void pxWayland::terminateClient()
           rtLogInfo("pxWayland::terminateClient: client pid %d killed", mClientPID);
           mClientTerminated = true;
       }
-      pthread_join( mClientMonitorThreadId, NULL );
+       pthread_cancel( mClientMonitorThreadId );
+       pthread_join( mClientMonitorThreadId, NULL );
    }
 
    if (mUseDispatchThread && mWaitingForRemoteObject)
    {
       mWaitingForRemoteObject = false;
-
+      pthread_cancel( mFindRemoteThreadId );
       pthread_join( mFindRemoteThreadId, NULL );
    }
 }
